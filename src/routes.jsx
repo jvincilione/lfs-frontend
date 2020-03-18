@@ -113,6 +113,11 @@ var routes = [
     path: "/privacy",
     component: PrivacyPolicy,
     layout: "/auth"
-  }
+  },
+  {
+    path: "/",
+    component: Index,
+    layout: "/admin"
+  },
 ];
 export default routes;

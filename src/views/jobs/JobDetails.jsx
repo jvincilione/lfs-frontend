@@ -34,12 +34,20 @@ import {
 import Header from "components/Headers/Header.jsx";
 import axios from "axios";
 import User from "../../state/User";
+import JobStatusChange from "./JobStatusChange"
+import JobSchedulModal from './JobScheduleModal';
+import JobStatus, { JobStatusName } from './JobStatus.enum';
+import moment from 'moment';
 
 class JobDetails extends React.Component {
   constructor() {
     super();
-    this.state = { job: null };
+    this.state = { job: null, showDateConfirmation: false };
     this.handleChange = this.handleChange.bind(this);
+    this.updateStatus = this.updateStatus.bind(this);
+    this.closeScheduler = this.closeScheduler.bind(this);
+    this.saveSchedule = this.saveSchedule.bind(this);
+    this.confirmStatusChange = this.confirmStatusChange.bind(this);
     this.save = this.save.bind(this);
   }
   componentDidMount() {
@@ -62,7 +70,7 @@ class JobDetails extends React.Component {
 
   save() {
     axios
-      .patch(`/api/job/${this.state.job.ID}`, this.job.company)
+      .patch(`/api/job/${this.state.job.ID}`, this.state.job)
       .then(job => {
         this.setState({ job: job.data });
       })
@@ -85,14 +93,46 @@ class JobDetails extends React.Component {
     return User.hasCompanyEditPrivs(job.companyId) || User.getType() === 0;
   }
 
-  handleChange(event) {
-    const target = event.target;
-    const value = target.value;
-    const name = target.name;
-    const company = { ...this.state.company };
-    company[name] = value;
+  updateStatus(status) {
+    if (status === 2) {
+      this.setState({ showDateConfirmation: true });
+    } else {
+      this.confirmStatusChange(status);
+    }
+  }
+
+  closeScheduler() {
+    this.setState({ showDateConfirmation: false });
+  }
+
+  saveSchedule(date) {
+    const job = { ...this.state.job };
+    job.scheduledDate = date;
+    this.confirmStatusChange(JobStatus.SCHEDULED, job);
+  }
+
+  confirmStatusChange(status, job) {
+    if (!job) {
+      job = { ...this.state.job };
+    }
+    job.status = status;
     this.setState({
-      company
+      job
+    });
+    setTimeout(() => {
+      this.save();
+      this.setState({ showDateConfirmation: false });
+    });
+  }
+
+  handleChange(event, isNum) {
+    const target = event.target;
+    const value = isNum ? parseFloat(target.value) : target.value;
+    const name = target.name;
+    const job = { ...this.state.job };
+    job[name] = value;
+    this.setState({
+      job
     });
   }
 
@@ -114,6 +154,17 @@ class JobDetails extends React.Component {
       });
   }
 
+  formatScheduledDate(date) {
+    if (date) {
+      if (moment().diff(date) < 0) {
+        return "Scheduled: " + moment(date).format("MMM d, YYYY h:mm a");
+      } else {
+        return "Schedule Past.";
+      }
+    }
+    return "Not scheduled."
+  }
+
   render() {
     if (!this.state.job) {
       return "";
@@ -133,6 +184,57 @@ class JobDetails extends React.Component {
                 <CardBody className="pt-0 pt-md-4">
                   <div className="text-center">
                     <h3>{job.fullName} ({job.company.name})</h3>
+                    {this.getLoggedInUserType() === 0 && (
+                      <div className="py-2">
+                        <JobStatusChange update={this.updateStatus} status={job.status}></JobStatusChange>
+                      </div>
+                    )}
+                    <Row className="py-2">
+                      <Col xs="12">{this.formatScheduledDate(job.scheduledDate)}</Col>
+                    </Row>
+                    <Row className="py-2 border-top">
+                      <Col xs="12" className="text-left">
+                        <FormGroup>
+                          <label
+                            className="form-control-label"
+                            htmlFor="input-labor-cost"
+                          >
+                            Price
+                            </label>
+                          <Input
+                            className="form-control-alternative"
+                            id="input-labor-cost"
+                            name="laborCost"
+                            placeholder=""
+                            type="number"
+                            defaultValue={job.laborCost}
+                            onChange={(e) => this.handleChange(e, true)}
+                            disabled={!this.canEdit(job)}
+                          />
+                        </FormGroup>
+                      </Col>
+                      {this.getLoggedInUserType() === 0 && (
+                        <Col xs="12" className="text-left">
+                          <FormGroup>
+                            <label
+                              className="form-control-label"
+                              htmlFor="input-parts-cost"
+                            >
+                              Parts Cost
+                            </label>
+                            <Input
+                              className="form-control-alternative"
+                              id="input-parts-cost"
+                              name="partsCost"
+                              placeholder=""
+                              type="number"
+                              defaultValue={job.partsCost}
+                              onChange={(e) => this.handleChange(e, true)}
+                              disabled={!this.canEdit(job)}
+                            />
+                          </FormGroup>
+                        </Col>)}
+                    </Row>
                   </div>
                 </CardBody>
               </Card>
@@ -141,13 +243,14 @@ class JobDetails extends React.Component {
               <Card className="bg-secondary shadow">
                 <CardHeader className="bg-white border-0">
                   <Row className="align-items-center">
-                    <Col xs="6">
+                    <Col xs="4">
                       <h3 className="mb-0">Job Information</h3>
                     </Col>
-                    {this.getLoggedInUserType() === 0 ? (
-                      <Col className="text-right" xs="3">
+                    {this.canEdit(job) ? (
+                      <Col className="text-right" xs="8">
                         <Button
-                          color="danger"
+                          color="black"
+                          className="text-danger"
                           href="#"
                           onClick={deleteJob}
                           size="sm"
@@ -186,33 +289,15 @@ class JobDetails extends React.Component {
                         </Col>
                         <Col lg="6">
                           <FormGroup>
-                            <label
-                              className="form-control-label"
-                              htmlFor="input-status"
-                            >
-                              Status
-                            </label>
-                            <Input
-                              type="select"
-                              className="form-control-alternative"
-                              id="input-primary-contact"
-                              name="primaryContact"
-                              defaultValue={job.status}
-                              onChange={this.handleChange}
-                              disabled={!this.canEdit(job)}
-                            >
-                              <option value="0">Pending</option>
-                              <option value="1">Scheduled</option>
-                              <option value="2">Awaiting Payment</option>
-                              <option value="3">Closed</option>
-                            </Input>
+                            <label className="form-control-label" htmlFor="input-status">Status</label>
+                            <div id="input-primary-contact">{JobStatusName[job.status]}</div>
                           </FormGroup>
                         </Col>
                         <Col xs="12">
                           <FormGroup>
                             <label
                               className="form-control-label"
-                              htmlFor="input-email"
+                              htmlFor="input-address"
                             >
                               Address
                             </label>
@@ -232,7 +317,7 @@ class JobDetails extends React.Component {
                           <FormGroup>
                             <label
                               className="form-control-label"
-                              htmlFor="input-email"
+                              htmlFor="input-address2"
                             >
                               Address 2
                             </label>
@@ -328,6 +413,66 @@ class JobDetails extends React.Component {
                             />
                           </FormGroup>
                         </Col>
+                        <Col xs="6">
+                          <FormGroup>
+                            <label
+                              className="form-control-label"
+                              htmlFor="input-order-number"
+                            >
+                              Company Order Number
+                            </label>
+                            <Input
+                              className="form-control-alternative"
+                              id="input-order-number"
+                              placeholder=""
+                              type="text"
+                              name="orderNumber"
+                              defaultValue={job.orderNumber}
+                              onChange={this.handleChange}
+                              disabled={!this.canEdit(job)}
+                            />
+                          </FormGroup>
+                        </Col>
+                        <Col xs="12">
+                          <FormGroup>
+                            <label
+                              className="form-control-label"
+                              htmlFor="input-instructions"
+                            >
+                              Job Details/Instructions
+                            </label>
+                            <Input
+                              className="form-control-alternative"
+                              id="input-instructions"
+                              placeholder=""
+                              type="textarea"
+                              name="instructions"
+                              defaultValue={job.instructions}
+                              onChange={this.handleChange}
+                              disabled={!this.canEdit(job)}
+                            />
+                          </FormGroup>
+                        </Col>
+                        <Col xs="12">
+                          <FormGroup>
+                            <label
+                              className="form-control-label"
+                              htmlFor="input-notes"
+                            >
+                              Technician Notes
+                            </label>
+                            <Input
+                              className="form-control-alternative"
+                              id="input-notes"
+                              placeholder=""
+                              type="textarea"
+                              name="notes"
+                              defaultValue={job.notes}
+                              onChange={this.handleChange}
+                              disabled={this.getLoggedInUserType() !== 0}
+                            />
+                          </FormGroup>
+                        </Col>
                         {this.canEdit(job) ? (
                           <Col className="text-right" xs="12">
                             <Button
@@ -350,6 +495,9 @@ class JobDetails extends React.Component {
             </Col>
           </Row>
         </Container>
+        {this.state.showDateConfirmation && (
+          <JobSchedulModal cancel={this.closeScheduler} save={this.saveSchedule}></JobSchedulModal>
+        )}
       </>
     );
   }

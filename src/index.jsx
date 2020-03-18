@@ -32,9 +32,11 @@ ReactDOM.render(
     <Switch>
       <Route path="/admin" render={props => <AdminLayout {...props} />} />
       <Route path="/auth" render={props => <AuthLayout {...props} />} />
-      {User.getType() === 0 && (
+      {User.getType() === 0 ? (
         <Redirect from="/" to="/admin/index" />
-      )}
+      ) : (
+          <Redirect from="/" to="/admin/company" />
+        )}
     </Switch>
   </BrowserRouter>,
   document.getElementById("root")

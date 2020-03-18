@@ -106,10 +106,10 @@ class Login extends React.Component {
       })
       .then(resp => {
         if (resp.data.token) {
-          if (User.getType !== 0) {
+          if (User.getType() !== 0) {
             this.setState({ redirectUrl: `/admin/company/${User.getCompanyId()}` });
           } else {
-            this.setSTate({redirectUrl: `/admin/index` })
+            this.setState({ redirectUrl: `/admin/index` })
           }
         }
       })
@@ -137,7 +137,7 @@ class Login extends React.Component {
             <div className="text-center text-muted mb-4">
               <small>Sign in</small>
             </div>
-            <Form role="form">
+            <Form role="form" onSubmit={(e) => e.preventDefault()}>
               <FormGroup className="mb-3">
                 <InputGroup
                   className={
@@ -195,7 +195,7 @@ class Login extends React.Component {
                 <Button
                   className="my-4"
                   color="primary"
-                  type="button"
+                  type="submit"
                   onClick={this.loginUser}
                 >
                   Sign in

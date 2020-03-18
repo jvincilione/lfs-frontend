@@ -1,11 +1,14 @@
 {
   "name": "lfs-portal-frontend",
   "version": "1.0.0",
-  "description": "Admin Portal based on Argon Dashboard by Creative Tim",
+  "description": "Labonte Furniture Services Customer Portal <based on Argon Dashboard by Creative Tim>",
   "main": "index.jsx",
-  "authors": [
-    {
-      "name": "Creative Tim",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jvincilione/lfs-frontend"
+  },
+  "authors": [{
+      "name": "Creative Tim <Template>",
       "email": ""
     },
     {
@@ -44,6 +47,7 @@
     "react": "16.8.4",
     "react-chartjs-2": "2.7.4",
     "react-copy-to-clipboard": "5.0.1",
+    "react-datepicker": "^2.14.0",
     "react-datetime": "2.16.3",
     "react-dom": "16.8.4",
     "react-google-maps": "9.4.5",
